@@ -77,12 +77,15 @@ li.expired{opacity:.6}
 .empty{padding:22px;text-align:center;color:var(--muted);font-size:15px}
 .overlay{position:fixed;inset:0;background:rgba(0,0,0,.45);display:none;align-items:flex-end;justify-content:center;z-index:10}
 .overlay.on{display:flex}
-.sheet{background:var(--card);width:100%;max-width:480px;border-radius:24px 24px 0 0;padding:22px 20px max(22px,env(safe-area-inset-bottom));max-height:92vh;max-height:92dvh;overflow:auto;overscroll-behavior:contain}
+.sheet{background:var(--card);width:100%;max-width:480px;border-radius:24px 24px 0 0;padding:22px 20px max(22px,env(safe-area-inset-bottom));max-height:92vh;max-height:92dvh;overflow-x:hidden;overflow-y:auto;overscroll-behavior:contain}
 .sheet h3{margin:0 0 6px;font-size:19px}
 .sheet p{margin:0 0 14px;color:var(--muted);font-size:14px;line-height:1.4}
 .sheet label{display:block;font-size:13px;color:var(--muted);margin:10px 2px 6px;font-weight:600}
 .sheet input{width:100%;font-size:32px;font-weight:650;text-align:center;padding:12px;border-radius:14px;border:1px solid var(--line);background:var(--bg);color:var(--ink);font-variant-numeric:tabular-nums;font-family:inherit}
-.sheet input[type=datetime-local],.sheet input[type=date]{font-size:20px;font-weight:600;min-height:56px}
+.sheet input{min-width:0;max-width:100%;-webkit-appearance:none;appearance:none}
+.sheet input[type=time],.sheet input[type=date]{font-size:17px;font-weight:600;min-height:56px;padding:12px 6px;display:block;text-align:center}
+.sheet input::-webkit-date-and-time-value{text-align:center;min-width:0;margin:0}
+.two{display:grid;grid-template-columns:minmax(0,1.3fr) minmax(0,1fr);gap:8px}
 .sheet .calc{text-align:center;color:var(--muted);margin:8px 0 6px;font-size:15px}
 .clr{background:none;border:0;color:var(--muted);font:inherit;font-size:14px;width:100%;padding:8px;cursor:pointer}
 .row{display:flex;gap:10px;margin-top:10px}
@@ -167,8 +170,8 @@ textarea{width:100%;font:12px ui-monospace,Menlo,monospace;padding:10px;border-r
       <button class="clr" id="edClr">Nessuna scadenza</button>
     </div>
     <div id="edLog">
-      <label for="edDt">Data e ora</label>
-      <input id="edDt" type="datetime-local" step="1">
+      <label for="edD">Data e ora</label>
+      <div class="two"><input id="edD" type="date"><input id="edT" type="time" step="1"></div>
     </div>
     <div class="row">
       <button class="ko" id="edCancel">Annulla</button>
@@ -469,7 +472,8 @@ textarea{width:100%;font:12px ui-monospace,Menlo,monospace;padding:10px;border-r
       var e = state.log[ref]; if(!e) return;
       $('edTitle').textContent = e.d > 0 ? 'Data di aggiunta' : 'Data di utilizzo';
       $('edText').textContent = e.d > 0 ? 'Quando hai aggiunto questo buono.' : 'Quando hai usato questo buono.';
-      $('edDt').value = toLocalInput(e.t);
+      var ld = toLocalInput(e.t).split('T');
+      $('edD').value = ld[0]; $('edT').value = ld[1];
       $('edBlk').style.display = 'none'; $('edLog').style.display = '';
     }
     $('ov2').classList.add('on');
@@ -484,7 +488,8 @@ textarea{width:100%;font:12px ui-monospace,Menlo,monospace;padding:10px;border-r
       var b = blockById(editing.ref); if(!b) return closeEdit();
       b.expiry = $('edExpIn').value || null;
     } else {
-      var ms = new Date($('edDt').value).getTime();
+      var tv = $('edT').value;
+      var ms = new Date($('edD').value + 'T' + (tv.length === 5 ? tv + ':00' : tv)).getTime();
       if(isNaN(ms)){ toast('Inserisci data e ora valide'); return; }
       state.log[editing.ref].t = ms;
     }
