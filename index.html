@@ -1,0 +1,571 @@
+<!DOCTYPE html>
+<html lang="it">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="theme-color" content="#f6f4ef">
+<meta name="apple-mobile-web-app-title" content="Buoni">
+<link rel="manifest" href="manifest.webmanifest">
+<link rel="apple-touch-icon" href="icon-180.png">
+<title>Buoni pasto</title>
+<style>
+:root{
+  --bg:#f6f4ef; --card:#fff; --ink:#1d1d1b; --muted:#77746b; --line:#e6e2d8;
+  --plus:#2f7d4f; --minus:#c2442f; --warn:#b8741a; --accent:#1d1d1b;
+}
+@media (prefers-color-scheme:dark){
+  :root{--bg:#141413;--card:#1f1f1d;--ink:#f2efe7;--muted:#9a968a;--line:#2e2d2a;--plus:#4fae7a;--minus:#e26a55;--warn:#e0a24a;--accent:#f2efe7}
+}
+*{box-sizing:border-box;-webkit-tap-highlight-color:transparent}
+html,body{margin:0;background:var(--bg);color:var(--ink);font-family:-apple-system,BlinkMacSystemFont,"SF Pro Text",system-ui,sans-serif}
+body{padding:max(16px,env(safe-area-inset-top)) max(16px,env(safe-area-inset-right)) max(24px,env(safe-area-inset-bottom)) max(16px,env(safe-area-inset-left));min-height:100vh}
+main{max-width:480px;margin:0 auto}
+header{display:flex;justify-content:space-between;align-items:center;margin:4px 2px 14px}
+h1{font-size:20px;margin:0;font-weight:650;letter-spacing:-.01em}
+.link{background:none;border:0;color:var(--muted);font:inherit;font-size:15px;padding:8px;cursor:pointer}
+.balance{background:var(--card);border:1px solid var(--line);border-radius:24px;padding:26px 20px;text-align:center}
+.balance .n{font-size:84px;font-weight:700;line-height:1;letter-spacing:-.04em;font-variant-numeric:tabular-nums}
+.balance .l{color:var(--muted);font-size:15px;margin-top:6px}
+.balance .e{font-size:24px;font-weight:600;margin-top:12px;font-variant-numeric:tabular-nums}
+.note{font-size:14px;margin-top:12px;padding:8px 12px;border-radius:12px;display:none}
+.note.on{display:block}
+.note.soon{background:rgba(184,116,26,.14);color:var(--warn)}
+.note.exp{background:rgba(194,68,47,.12);color:var(--minus)}
+.btns{display:grid;grid-template-columns:1fr 1fr;gap:12px;margin:14px 0}
+.btn{border:0;border-radius:22px;height:104px;font-size:56px;font-weight:500;color:#fff;cursor:pointer;line-height:1;transition:transform .08s,opacity .2s}
+.btn:active{transform:scale(.96)}
+.btn:disabled{opacity:.3}
+.btn.plus{background:var(--plus)}
+.btn.minus{background:var(--minus)}
+.btn small{display:block;font-size:13px;font-weight:600;margin-top:6px;opacity:.9;letter-spacing:.02em}
+.stats{display:flex;gap:10px;margin-bottom:18px}
+.stat{flex:1;background:var(--card);border:1px solid var(--line);border-radius:16px;padding:12px 14px}
+.stat b{display:block;font-size:20px;font-variant-numeric:tabular-nums}
+.stat span{font-size:13px;color:var(--muted)}
+.h{display:flex;justify-content:space-between;align-items:center;margin:6px 4px 8px}
+h2{font-size:13px;text-transform:uppercase;letter-spacing:.06em;color:var(--muted);margin:0;font-weight:600}
+.h .link{font-size:14px;padding:4px 0;color:var(--ink);font-weight:600}
+ul{list-style:none;margin:0 0 20px;padding:0;background:var(--card);border:1px solid var(--line);border-radius:18px;overflow:hidden}
+li{display:flex;align-items:center;gap:12px;padding:12px 14px;border-bottom:1px solid var(--line)}
+li:last-child{border-bottom:0}
+.dot{width:32px;height:32px;border-radius:50%;display:grid;place-items:center;color:#fff;font-weight:700;flex:none}
+.dot.p{background:var(--plus)}.dot.m{background:var(--minus)}.dot.s{background:var(--muted)}
+.t{flex:1;min-width:0}
+.t b{display:block;font-size:16px;font-weight:600}
+.t span{font-size:13px;color:var(--muted)}
+.t span.soon{color:var(--warn);font-weight:600}
+.t span.exp{color:var(--minus);font-weight:600}
+li.expired{opacity:.6}
+.cnt{font-size:20px;font-weight:700;font-variant-numeric:tabular-nums}
+.del{background:none;border:0;color:var(--muted);font-size:20px;padding:6px 8px;cursor:pointer}
+.empty{padding:22px;text-align:center;color:var(--muted);font-size:15px}
+.overlay{position:fixed;inset:0;background:rgba(0,0,0,.45);display:none;align-items:flex-end;justify-content:center;z-index:10}
+.overlay.on{display:flex}
+.sheet{background:var(--card);width:100%;max-width:480px;border-radius:24px 24px 0 0;padding:22px 20px max(22px,env(safe-area-inset-bottom));max-height:92vh;overflow:auto}
+.sheet h3{margin:0 0 6px;font-size:19px}
+.sheet p{margin:0 0 14px;color:var(--muted);font-size:14px;line-height:1.4}
+.sheet label{display:block;font-size:13px;color:var(--muted);margin:10px 2px 6px;font-weight:600}
+.sheet input{width:100%;font-size:32px;font-weight:650;text-align:center;padding:12px;border-radius:14px;border:1px solid var(--line);background:var(--bg);color:var(--ink);font-variant-numeric:tabular-nums;font-family:inherit}
+.sheet input[type=datetime-local],.sheet input[type=date]{font-size:20px;font-weight:600;min-height:56px}
+.sheet .calc{text-align:center;color:var(--muted);margin:8px 0 6px;font-size:15px}
+.clr{background:none;border:0;color:var(--muted);font:inherit;font-size:14px;width:100%;padding:8px;cursor:pointer}
+.row{display:flex;gap:10px;margin-top:10px}
+.row button{flex:1;padding:15px;border-radius:14px;border:0;font:inherit;font-size:17px;font-weight:600;cursor:pointer}
+.ok{background:var(--accent);color:var(--bg)}
+.ko{background:var(--bg);color:var(--ink)}
+.danger{background:none;border:0;color:var(--minus);font:inherit;font-size:15px;width:100%;margin-top:14px;padding:8px;cursor:pointer}
+body.loading main{opacity:.45;pointer-events:none}
+.sync{text-align:center;color:var(--muted);font-size:12px;margin:4px 0 0}
+.edit{background:none;border:0;color:var(--muted);font-size:18px;padding:6px 8px;cursor:pointer}
+li.click{cursor:pointer}
+textarea{width:100%;font:12px ui-monospace,Menlo,monospace;padding:10px;border-radius:12px;border:1px solid var(--line);background:var(--bg);color:var(--ink);resize:vertical}
+.toast{position:fixed;left:50%;bottom:max(24px,env(safe-area-inset-bottom));transform:translate(-50%,80px);background:var(--ink);color:var(--bg);padding:10px 16px;border-radius:999px;font-size:14px;opacity:0;transition:.25s;z-index:20;pointer-events:none;white-space:nowrap}
+.toast.on{transform:translate(-50%,0);opacity:1}
+</style>
+</head>
+<body class="loading">
+<main>
+  <header>
+    <h1>Buoni pasto</h1>
+    <button class="link" id="openSet">Impostazioni</button>
+  </header>
+
+  <section class="balance">
+    <div class="n" id="n">0</div>
+    <div class="l" id="l">buoni disponibili</div>
+    <div class="e" id="e">0,00 €</div>
+    <div class="note soon" id="soon"></div>
+    <div class="note exp" id="expd"></div>
+  </section>
+
+  <div class="btns">
+    <button class="btn minus" id="minus" aria-label="Usa un buono">−<small>USA 8 €</small></button>
+    <button class="btn plus" id="plus" aria-label="Aggiungi un buono">+<small>AGGIUNGI</small></button>
+  </div>
+
+  <div class="stats">
+    <div class="stat"><b id="sMonth">0</b><span>usati questo mese</span></div>
+    <div class="stat"><b id="sMonthE">0,00 €</b><span>spesi questo mese</span></div>
+  </div>
+
+  <div class="h"><h2>Blocchi</h2><button class="link" id="newBlock">+ Nuovo blocco</button></div>
+  <ul id="blocks"></ul>
+
+  <div class="h"><h2>Storico</h2></div>
+  <ul id="list"></ul>
+  <p class="sync" id="sync">Caricamento…</p>
+</main>
+
+<div class="overlay" id="ov">
+  <div class="sheet">
+    <h3 id="shTitle">Saldo iniziale</h3>
+    <p id="shText"></p>
+    <label for="qty">Numero di buoni</label>
+    <input id="qty" type="number" inputmode="numeric" min="0" step="1" placeholder="0">
+    <div class="calc" id="calc">= 0,00 €</div>
+    <label for="exp">Scadenza (facoltativa)</label>
+    <input id="exp" type="date">
+    <button class="clr" id="clrExp">Nessuna scadenza</button>
+    <div class="row">
+      <button class="ko" id="cancel">Annulla</button>
+      <button class="ok" id="save">Salva</button>
+    </div>
+    <button class="clr" id="openBk">Copia di sicurezza e importazione</button>
+    <button class="danger" id="reset">Azzera tutto</button>
+  </div>
+</div>
+<div class="overlay" id="ov2">
+  <div class="sheet">
+    <h3 id="edTitle">Modifica</h3>
+    <p id="edText"></p>
+    <div id="edBlk">
+      <label for="edExpIn">Scadenza del blocco</label>
+      <input id="edExpIn" type="date">
+      <button class="clr" id="edClr">Nessuna scadenza</button>
+    </div>
+    <div id="edLog">
+      <label for="edDt">Data e ora</label>
+      <input id="edDt" type="datetime-local" step="1">
+    </div>
+    <div class="row">
+      <button class="ko" id="edCancel">Annulla</button>
+      <button class="ok" id="edSave">Salva</button>
+    </div>
+  </div>
+</div>
+<div class="overlay" id="ov3">
+  <div class="sheet">
+    <h3>Copia di sicurezza</h3>
+    <p>Copia questo testo per salvare i tuoi dati. Per ripristinarli o portarli da un'altra versione, incolla qui il testo copiato e tocca Importa. L'importazione sostituisce i dati attuali.</p>
+    <textarea id="bk" rows="7" autocapitalize="off" autocorrect="off" spellcheck="false"></textarea>
+    <div class="row">
+      <button class="ko" id="bkClose">Chiudi</button>
+      <button class="ok" id="bkCopy">Copia</button>
+    </div>
+    <button class="danger" id="bkImport" style="color:var(--ink)">Importa il testo incollato</button>
+  </div>
+</div>
+<div class="toast" id="toast"></div>
+
+<script>
+(function(){
+  var VALUE = 8, KEY = 'buoniPasto.v2', OLD = 'buoniPasto.v1';
+  var mem = null;
+  var state = load();
+
+  function empty(){ return { blocks: [], log: [] }; }
+  function load(){
+    try{
+      var raw = localStorage.getItem(KEY);
+      if(raw){ var s = JSON.parse(raw); if(s && Array.isArray(s.blocks) && Array.isArray(s.log)) return s; }
+      var old = localStorage.getItem(OLD);
+      if(old){
+        var o = JSON.parse(old);
+        if(o && Array.isArray(o.log)){
+          var s2 = empty();
+          if(o.initial > 0 || o.log.length || o.initialAt){
+            s2.blocks.push({ id:'b0', kind:'init', qty:o.initial||0, expiry:null, t:o.initialAt || (o.log[0] && o.log[0].t) || Date.now() });
+            o.log.forEach(function(x){ s2.log.push({ t:x.t, d:x.d, b:'b0' }); });
+          }
+          return s2;
+        }
+      }
+    }catch(e){}
+    return mem || empty();
+  }
+  var remoteRef = null, writing = false, pending = false, ready = false;
+  function pack(){ return { v: JSON.stringify(state), u: Date.now() }; }
+  function parseSnap(snap){
+    var d = (snap && typeof snap.data === 'function') ? snap.data() : snap;
+    if(d && typeof d.v === 'string'){
+      try{ var r = JSON.parse(d.v); if(r && Array.isArray(r.blocks) && Array.isArray(r.log)) return r; }catch(e){}
+    }
+    return null;
+  }
+  function pushRemote(){
+    if(!remoteRef) return;
+    if(writing){ pending = true; return; }
+    writing = true;
+    Promise.resolve().then(function(){ return remoteRef.set(pack()); })
+      .catch(function(){})
+      .then(function(){ writing = false; if(pending){ pending = false; pushRemote(); } });
+  }
+  function save(){
+    mem = state;
+    try{ localStorage.setItem(KEY, JSON.stringify(state)); }catch(e){}
+    pushRemote();
+  }
+  function connect(){
+    return (async function(){
+      var c = window.claude;
+      if(!c || !c.use) return;
+      var db = await c.use('db'), user = await c.use('user');
+      if(!db || !user) return;
+      var id = await user.id();
+      if(!id) return;
+      var ref = db.collection('data/users/' + id).doc('buoni');
+      var r = parseSnap(await ref.get());
+      remoteRef = ref;
+      if(r){
+        if(!ready){
+          state = r; mem = r;
+          try{ localStorage.setItem(KEY, JSON.stringify(r)); }catch(e){}
+        }
+      } else if(state.blocks.length || state.log.length){
+        pushRemote();
+      }
+    })();
+  }
+
+  var eur = new Intl.NumberFormat('it-IT',{style:'currency',currency:'EUR'});
+  var dFmt = new Intl.DateTimeFormat('it-IT',{weekday:'short',day:'numeric',month:'short',year:'numeric'});
+  var sFmt = new Intl.DateTimeFormat('it-IT',{day:'numeric',month:'short',year:'numeric'});
+  var tFmt = new Intl.DateTimeFormat('it-IT',{hour:'2-digit',minute:'2-digit',second:'2-digit'});
+  var $ = function(id){return document.getElementById(id);};
+
+  /* ---- date helpers (scadenza valida fino a fine giornata) ---- */
+  function parseDay(s){ var p = s.split('-'); return new Date(+p[0], +p[1]-1, +p[2]); }
+  function endOf(s){ var d = parseDay(s); d.setHours(23,59,59,999); return d.getTime(); }
+  function daysLeft(s){
+    var t = new Date(); t = new Date(t.getFullYear(), t.getMonth(), t.getDate());
+    return Math.round((parseDay(s) - t) / 86400000);
+  }
+  function rel(s){
+    var n = daysLeft(s);
+    if(n < 0) return 'scaduto';
+    if(n === 0) return 'scade oggi';
+    if(n === 1) return 'scade domani';
+    return 'scade tra ' + n + ' giorni';
+  }
+
+  /* ---- modello ---- */
+  function remaining(b){
+    return state.log.reduce(function(a,x){ return x.b === b.id ? a + x.d : a; }, b.qty);
+  }
+  function isExp(b){ return !!b.expiry && Date.now() > endOf(b.expiry); }
+  function activeBlocks(){ return state.blocks.filter(function(b){ return !isExp(b); }); }
+  function balance(){ return activeBlocks().reduce(function(a,b){ return a + remaining(b); }, 0); }
+  function expiredCount(){
+    return state.blocks.reduce(function(a,b){ return isExp(b) ? a + Math.max(0, remaining(b)) : a; }, 0);
+  }
+  function useTarget(){
+    var c = activeBlocks().filter(function(b){ return remaining(b) > 0; });
+    c.sort(function(a,b){
+      var ea = a.expiry ? endOf(a.expiry) : Infinity, eb = b.expiry ? endOf(b.expiry) : Infinity;
+      return ea !== eb ? ea - eb : a.t - b.t;
+    });
+    return c[0] || null;
+  }
+  function addTarget(){
+    var c = activeBlocks().slice().sort(function(a,b){ return b.t - a.t; });
+    if(c[0]) return c[0];
+    var nb = { id:'b' + Date.now(), kind:'auto', qty:0, expiry:null, t:Date.now() };
+    state.blocks.push(nb);
+    return nb;
+  }
+  function blockTag(b){ return b && b.expiry ? ' · scad. ' + sFmt.format(parseDay(b.expiry)) : ''; }
+  function blockById(id){ return state.blocks.filter(function(b){ return b.id === id; })[0]; }
+
+  /* ---- render ---- */
+  function render(){
+    var bal = balance();
+    $('n').textContent = bal;
+    $('l').textContent = bal === 1 ? 'buono disponibile' : 'buoni disponibili';
+    $('e').textContent = eur.format(bal * VALUE);
+    $('minus').disabled = !useTarget();
+
+    var soon = null;
+    activeBlocks().forEach(function(b){
+      if(b.expiry && remaining(b) > 0 && (!soon || endOf(b.expiry) < endOf(soon.expiry))) soon = b;
+    });
+    var sn = $('soon');
+    if(soon){
+      var r = remaining(soon);
+      sn.textContent = r + (r === 1 ? ' buono ' : ' buoni ') + rel(soon.expiry) + ' (' + sFmt.format(parseDay(soon.expiry)) + ')';
+      sn.className = 'note soon on';
+    } else sn.className = 'note soon';
+    var ec = expiredCount(), en = $('expd');
+    if(ec > 0){
+      en.textContent = ec + (ec === 1 ? ' buono scaduto' : ' buoni scaduti') + ' (' + eur.format(ec * VALUE) + ' persi)';
+      en.className = 'note exp on';
+    } else en.className = 'note exp';
+
+    var now = new Date(), used = 0;
+    state.log.forEach(function(x){
+      var d = new Date(x.t);
+      if(x.d < 0 && d.getMonth() === now.getMonth() && d.getFullYear() === now.getFullYear()) used++;
+    });
+    $('sMonth').textContent = used;
+    $('sMonthE').textContent = eur.format(used * VALUE);
+
+    renderBlocks();
+    renderLog();
+  }
+
+  function renderBlocks(){
+    var ul = $('blocks'); ul.innerHTML = '';
+    var list = state.blocks.filter(function(b){ return remaining(b) > 0; });
+    list.sort(function(a,b){
+      var ea = a.expiry ? endOf(a.expiry) : Infinity, eb = b.expiry ? endOf(b.expiry) : Infinity;
+      return ea !== eb ? ea - eb : a.t - b.t;
+    });
+    if(!list.length){ ul.innerHTML = '<div class="empty">Nessun blocco con buoni residui.</div>'; return; }
+    list.forEach(function(b){
+      var li = document.createElement('li');
+      var ex = isExp(b), sub, cls = '';
+      if(!b.expiry){ sub = 'Senza scadenza'; }
+      else {
+        var n = daysLeft(b.expiry);
+        sub = (ex ? 'Scaduto il ' : 'Scade il ') + sFmt.format(parseDay(b.expiry)) + (ex ? '' : ' · ' + rel(b.expiry).replace('scade ', ''));
+        cls = ex ? 'exp' : (n <= 7 ? 'soon' : '');
+      }
+      if(ex) li.className = 'expired';
+      var r = remaining(b);
+      li.innerHTML = '<div class="t"><b>' + r + (r === 1 ? ' buono' : ' buoni') + ' · ' + eur.format(r * VALUE) + '</b>' +
+        '<span class="' + cls + '">' + sub + '</span></div>';
+      li.appendChild(editBtn(function(){ openEdit('blk', b.id); }, 'Modifica scadenza'));
+      ul.appendChild(li);
+    });
+  }
+
+  function renderLog(){
+    var ul = $('list'); ul.innerHTML = '';
+    var items = [];
+    state.log.forEach(function(x,i){ items.push({ t:x.t, d:x.d, i:i, b:blockById(x.b) }); });
+    state.blocks.forEach(function(b){ if(b.kind !== 'auto') items.push({ t:b.t, blk:b }); });
+    items.sort(function(a,b){ return b.t - a.t; });
+    if(!items.length){
+      ul.innerHTML = '<div class="empty">Nessun movimento. Imposta il saldo iniziale o premi + / −.</div>';
+      return;
+    }
+    items.forEach(function(x){
+      var li = document.createElement('li');
+      var d = new Date(x.t), cls, sym, title, sub;
+      if(x.blk){
+        cls = 's'; sym = '•';
+        title = (x.blk.kind === 'init' ? 'Saldo iniziale: ' : 'Nuovo blocco: ') + x.blk.qty + (x.blk.qty === 1 ? ' buono' : ' buoni');
+        sub = dFmt.format(d) + ' · ' + tFmt.format(d) + blockTag(x.blk);
+      } else {
+        cls = x.d > 0 ? 'p' : 'm'; sym = x.d > 0 ? '+' : '−';
+        title = x.d > 0 ? 'Aggiunto 1 buono' : 'Usato 1 buono';
+        sub = dFmt.format(d) + ' · ' + tFmt.format(d) + blockTag(x.b);
+      }
+      li.innerHTML = '<div class="dot ' + cls + '">' + sym + '</div>' +
+        '<div class="t"><b>' + title + '</b><span>' + sub + '</span></div>';
+      li.appendChild(editBtn(function(){
+        if(x.blk) openEdit('blk', x.blk.id); else openEdit('log', x.i);
+      }, x.blk ? 'Modifica scadenza' : 'Modifica data e ora'));
+      if(!x.blk){
+        var del = document.createElement('button');
+        del.className = 'del'; del.textContent = '✕'; del.setAttribute('aria-label','Elimina movimento');
+        del.onclick = function(){
+          if(x.d > 0 && x.b && remaining(x.b) - 1 < 0){ toast('Già usato: elimina prima i prelievi'); return; }
+          state.log.splice(x.i,1); save(); render(); toast('Movimento eliminato');
+        };
+        li.appendChild(del);
+      }
+      ul.appendChild(li);
+    });
+  }
+
+  /* ---- azioni ---- */
+  function add(delta){
+    if(!ready) return;
+    var target = delta < 0 ? useTarget() : addTarget();
+    if(!target) return;
+    state.log.push({ t: Date.now(), d: delta, b: target.id });
+    save(); render();
+    if(navigator.vibrate){ try{ navigator.vibrate(15); }catch(e){} }
+  }
+  var tt;
+  function toast(msg){
+    var t = $('toast'); t.textContent = msg; t.classList.add('on');
+    clearTimeout(tt); tt = setTimeout(function(){ t.classList.remove('on'); }, 2200);
+  }
+  $('plus').onclick = function(){ add(1); };
+  $('minus').onclick = function(){ add(-1); };
+
+  /* ---- modifica scadenza blocco / data movimento ---- */
+  function editBtn(fn, label){
+    var b = document.createElement('button');
+    b.className = 'edit'; b.textContent = '✎'; b.setAttribute('aria-label', label);
+    b.onclick = fn;
+    return b;
+  }
+  function pad(n){ return (n < 10 ? '0' : '') + n; }
+  function toLocalInput(ms){
+    var d = new Date(ms);
+    return d.getFullYear() + '-' + pad(d.getMonth()+1) + '-' + pad(d.getDate()) + 'T' +
+           pad(d.getHours()) + ':' + pad(d.getMinutes()) + ':' + pad(d.getSeconds());
+  }
+  var editing = null;
+  function openEdit(type, ref){
+    editing = { type:type, ref:ref };
+    if(type === 'blk'){
+      var b = blockById(ref); if(!b) return;
+      $('edTitle').textContent = 'Scadenza del blocco';
+      $('edText').textContent = (b.kind === 'init' ? 'Saldo iniziale' : 'Blocco') + ' di ' + b.qty + (b.qty === 1 ? ' buono' : ' buoni') + '. Cambiando la data si aggiorna la scadenza di tutti i buoni di questo blocco.';
+      $('edExpIn').value = b.expiry || '';
+      $('edBlk').style.display = ''; $('edLog').style.display = 'none';
+    } else {
+      var e = state.log[ref]; if(!e) return;
+      $('edTitle').textContent = e.d > 0 ? 'Data di aggiunta' : 'Data di utilizzo';
+      $('edText').textContent = e.d > 0 ? 'Quando hai aggiunto questo buono.' : 'Quando hai usato questo buono.';
+      $('edDt').value = toLocalInput(e.t);
+      $('edBlk').style.display = 'none'; $('edLog').style.display = '';
+    }
+    $('ov2').classList.add('on');
+  }
+  function closeEdit(){ $('ov2').classList.remove('on'); editing = null; }
+  $('edCancel').onclick = closeEdit;
+  $('ov2').onclick = function(e){ if(e.target === this) closeEdit(); };
+  $('edClr').onclick = function(){ $('edExpIn').value = ''; };
+  $('edSave').onclick = function(){
+    if(!editing) return;
+    if(editing.type === 'blk'){
+      var b = blockById(editing.ref); if(!b) return closeEdit();
+      b.expiry = $('edExpIn').value || null;
+    } else {
+      var ms = new Date($('edDt').value).getTime();
+      if(isNaN(ms)){ toast('Inserisci data e ora valide'); return; }
+      state.log[editing.ref].t = ms;
+    }
+    save(); render(); closeEdit(); toast('Modifica salvata');
+  };
+
+  /* ---- sheet (saldo iniziale / nuovo blocco) ---- */
+  var mode = 'init';
+  function openSheet(m){
+    mode = m;
+    if(m === 'init'){
+      $('shTitle').textContent = 'Saldo iniziale';
+      $('shText').textContent = 'Imposta quanti buoni hai adesso e, se serve, la scadenza. Salvando, lo storico e i blocchi attuali vengono azzerati.';
+      $('qty').value = balance();
+      $('save').textContent = 'Salva';
+      $('reset').style.display = '';
+    } else {
+      $('shTitle').textContent = 'Nuovo blocco';
+      $('shText').textContent = 'Aggiungi un blocco di buoni con la sua scadenza. Il saldo attuale e lo storico restano invariati. I buoni più vicini alla scadenza vengono usati per primi.';
+      $('qty').value = '';
+      $('save').textContent = 'Aggiungi';
+      $('reset').style.display = 'none';
+    }
+    $('exp').value = '';
+    updCalc();
+    $('ov').classList.add('on');
+  }
+  function closeSheet(){ $('ov').classList.remove('on'); }
+  function updCalc(){
+    var v = parseInt($('qty').value,10); if(isNaN(v)||v<0) v = 0;
+    $('calc').textContent = '= ' + eur.format(v * VALUE);
+  }
+  $('openSet').onclick = function(){ openSheet('init'); };
+  $('newBlock').onclick = function(){ openSheet('block'); };
+  $('cancel').onclick = closeSheet;
+  $('qty').oninput = updCalc;
+  $('clrExp').onclick = function(){ $('exp').value = ''; };
+  $('ov').onclick = function(e){ if(e.target === this) closeSheet(); };
+  $('save').onclick = function(){
+    var v = parseInt($('qty').value,10);
+    if(isNaN(v) || v < 0 || (mode === 'block' && v < 1)){ toast('Inserisci un numero valido'); return; }
+    var ex = $('exp').value || null;
+    var blk = { id:'b' + Date.now(), kind: mode === 'init' ? 'init' : 'block', qty:v, expiry:ex, t:Date.now() };
+    if(mode === 'init') state = empty();
+    state.blocks.push(blk);
+    save(); render(); closeSheet();
+    toast(mode === 'init' ? 'Saldo impostato' : 'Blocco aggiunto');
+  };
+  /* ---- copia di sicurezza / importazione ---- */
+  function validState(o){
+    if(!o || !Array.isArray(o.blocks) || !Array.isArray(o.log)) return null;
+    var day = /^\d{4}-\d{2}-\d{2}$/, ids = {}, out = empty();
+    for(var i = 0; i < o.blocks.length; i++){
+      var b = o.blocks[i];
+      if(!b || typeof b.id !== 'string' || !isFinite(b.qty) || !isFinite(b.t)) return null;
+      if(b.expiry != null && !(typeof b.expiry === 'string' && day.test(b.expiry))) return null;
+      var kind = (b.kind === 'init' || b.kind === 'block' || b.kind === 'auto') ? b.kind : 'block';
+      ids[b.id] = 1;
+      out.blocks.push({ id:b.id, kind:kind, qty:Math.trunc(+b.qty), expiry:b.expiry || null, t:+b.t });
+    }
+    for(var j = 0; j < o.log.length; j++){
+      var x = o.log[j];
+      if(!x || !isFinite(x.t) || (x.d !== 1 && x.d !== -1) || !ids[x.b]) return null;
+      out.log.push({ t:+x.t, d:x.d, b:x.b });
+    }
+    return out;
+  }
+  $('openBk').onclick = function(){
+    closeSheet();
+    $('bk').value = JSON.stringify(state);
+    $('ov3').classList.add('on');
+  };
+  $('bkClose').onclick = function(){ $('ov3').classList.remove('on'); };
+  $('ov3').onclick = function(e){ if(e.target === this) $('ov3').classList.remove('on'); };
+  $('bkCopy').onclick = function(){
+    var ta = $('bk');
+    ta.value = JSON.stringify(state);
+    ta.focus(); ta.select();
+    try{
+      navigator.clipboard.writeText(ta.value).then(
+        function(){ toast('Copiato'); },
+        function(){ toast('Seleziona il testo e copialo a mano'); });
+    }catch(e){ toast('Seleziona il testo e copialo a mano'); }
+  };
+  $('bkImport').onclick = function(){
+    var o = null;
+    try{ o = validState(JSON.parse($('bk').value)); }catch(e){}
+    if(!o){ toast('Testo non valido'); return; }
+    state = o; save(); render();
+    $('ov3').classList.remove('on');
+    toast('Dati importati');
+  };
+
+  var armed = false, rt;
+  $('reset').onclick = function(){
+    if(!armed){
+      armed = true; this.textContent = 'Tocca ancora per confermare';
+      rt = setTimeout(function(){ armed = false; $('reset').textContent = 'Azzera tutto'; }, 3000);
+      return;
+    }
+    clearTimeout(rt); armed = false; this.textContent = 'Azzera tutto';
+    state = empty(); save(); render(); closeSheet(); toast('Tutto azzerato');
+  };
+
+  if('serviceWorker' in navigator){ navigator.serviceWorker.register('sw.js').catch(function(){}); }
+  render();
+  Promise.race([
+    connect().catch(function(){}),
+    new Promise(function(r){ setTimeout(r, 5000); })
+  ]).then(function(){
+    ready = true;
+    document.body.classList.remove('loading');
+    $('sync').textContent = remoteRef ? 'Dati salvati nel tuo account Claude' : 'Dati salvati solo su questo dispositivo';
+    render();
+  });
+  // aggiorna scadenze se l'app resta aperta a lungo
+  document.addEventListener('visibilitychange', function(){ if(!document.hidden) render(); });
+})();
+</script>
+</body>
+</html>
