@@ -100,7 +100,7 @@ textarea{width:100%;font:12px ui-monospace,Menlo,monospace;padding:10px;border-r
   </section>
 
   <div class="btns">
-    <button class="btn minus" id="minus" aria-label="Usa un buono">−<small>USA 8 €</small></button>
+    <button class="btn minus" id="minus" aria-label="Usa un buono">−<small id="minusL">USA 8 €</small></button>
     <button class="btn plus" id="plus" aria-label="Aggiungi un buono">+<small>AGGIUNGI</small></button>
   </div>
 
@@ -131,6 +131,7 @@ textarea{width:100%;font:12px ui-monospace,Menlo,monospace;padding:10px;border-r
       <button class="ko" id="cancel">Annulla</button>
       <button class="ok" id="save">Salva</button>
     </div>
+    <button class="clr" id="openVal">Valore del buono</button>
     <button class="clr" id="openBk">Copia di sicurezza e importazione</button>
     <button class="danger" id="reset">Azzera tutto</button>
   </div>
@@ -166,11 +167,23 @@ textarea{width:100%;font:12px ui-monospace,Menlo,monospace;padding:10px;border-r
     <button class="danger" id="bkImport" style="color:var(--ink)">Importa il testo incollato</button>
   </div>
 </div>
+<div class="overlay" id="ov4">
+  <div class="sheet">
+    <h3>Valore del buono</h3>
+    <p>Importo in euro di ogni buono. Cambia gli importi mostrati nell'app, anche per i movimenti già registrati.</p>
+    <label for="valIn">Euro per buono</label>
+    <input id="valIn" type="number" inputmode="decimal" min="0.01" step="0.01" placeholder="8">
+    <div class="row">
+      <button class="ko" id="valCancel">Annulla</button>
+      <button class="ok" id="valSave">Salva</button>
+    </div>
+  </div>
+</div>
 <div class="toast" id="toast"></div>
 
 <script>
 (function(){
-  var VALUE = 8, KEY = 'buoniPasto.v2', OLD = 'buoniPasto.v1';
+  var DEFAULT_VALUE = 8, KEY = 'buoniPasto.v2', OLD = 'buoniPasto.v1';
   var mem = null;
   var state = load();
 
@@ -238,6 +251,8 @@ textarea{width:100%;font:12px ui-monospace,Menlo,monospace;padding:10px;border-r
     })();
   }
 
+  function val(){ return state && state.value > 0 ? state.value : DEFAULT_VALUE; }
+  var nFmt = new Intl.NumberFormat('it-IT',{maximumFractionDigits:2});
   var eur = new Intl.NumberFormat('it-IT',{style:'currency',currency:'EUR'});
   var dFmt = new Intl.DateTimeFormat('it-IT',{weekday:'short',day:'numeric',month:'short',year:'numeric'});
   var sFmt = new Intl.DateTimeFormat('it-IT',{day:'numeric',month:'short',year:'numeric'});
@@ -292,8 +307,9 @@ textarea{width:100%;font:12px ui-monospace,Menlo,monospace;padding:10px;border-r
     var bal = balance();
     $('n').textContent = bal;
     $('l').textContent = bal === 1 ? 'buono disponibile' : 'buoni disponibili';
-    $('e').textContent = eur.format(bal * VALUE);
+    $('e').textContent = eur.format(bal * val());
     $('minus').disabled = !useTarget();
+    $('minusL').textContent = 'USA ' + nFmt.format(val()) + ' €';
 
     var soon = null;
     activeBlocks().forEach(function(b){
@@ -307,7 +323,7 @@ textarea{width:100%;font:12px ui-monospace,Menlo,monospace;padding:10px;border-r
     } else sn.className = 'note soon';
     var ec = expiredCount(), en = $('expd');
     if(ec > 0){
-      en.textContent = ec + (ec === 1 ? ' buono scaduto' : ' buoni scaduti') + ' (' + eur.format(ec * VALUE) + ' persi)';
+      en.textContent = ec + (ec === 1 ? ' buono scaduto' : ' buoni scaduti') + ' (' + eur.format(ec * val()) + ' persi)';
       en.className = 'note exp on';
     } else en.className = 'note exp';
 
@@ -317,7 +333,7 @@ textarea{width:100%;font:12px ui-monospace,Menlo,monospace;padding:10px;border-r
       if(x.d < 0 && d.getMonth() === now.getMonth() && d.getFullYear() === now.getFullYear()) used++;
     });
     $('sMonth').textContent = used;
-    $('sMonthE').textContent = eur.format(used * VALUE);
+    $('sMonthE').textContent = eur.format(used * val());
 
     renderBlocks();
     renderLog();
@@ -342,7 +358,7 @@ textarea{width:100%;font:12px ui-monospace,Menlo,monospace;padding:10px;border-r
       }
       if(ex) li.className = 'expired';
       var r = remaining(b);
-      li.innerHTML = '<div class="t"><b>' + r + (r === 1 ? ' buono' : ' buoni') + ' · ' + eur.format(r * VALUE) + '</b>' +
+      li.innerHTML = '<div class="t"><b>' + r + (r === 1 ? ' buono' : ' buoni') + ' · ' + eur.format(r * val()) + '</b>' +
         '<span class="' + cls + '">' + sub + '</span></div>';
       li.appendChild(editBtn(function(){ openEdit('blk', b.id); }, 'Modifica scadenza'));
       ul.appendChild(li);
@@ -478,7 +494,7 @@ textarea{width:100%;font:12px ui-monospace,Menlo,monospace;padding:10px;border-r
   function closeSheet(){ $('ov').classList.remove('on'); }
   function updCalc(){
     var v = parseInt($('qty').value,10); if(isNaN(v)||v<0) v = 0;
-    $('calc').textContent = '= ' + eur.format(v * VALUE);
+    $('calc').textContent = '= ' + eur.format(v * val());
   }
   $('openSet').onclick = function(){ openSheet('init'); };
   $('newBlock').onclick = function(){ openSheet('block'); };
@@ -491,7 +507,7 @@ textarea{width:100%;font:12px ui-monospace,Menlo,monospace;padding:10px;border-r
     if(isNaN(v) || v < 0 || (mode === 'block' && v < 1)){ toast('Inserisci un numero valido'); return; }
     var ex = $('exp').value || null;
     var blk = { id:'b' + Date.now(), kind: mode === 'init' ? 'init' : 'block', qty:v, expiry:ex, t:Date.now() };
-    if(mode === 'init') state = empty();
+    if(mode === 'init'){ var keep = state.value; state = empty(); if(keep) state.value = keep; }
     state.blocks.push(blk);
     save(); render(); closeSheet();
     toast(mode === 'init' ? 'Saldo impostato' : 'Blocco aggiunto');
@@ -513,6 +529,7 @@ textarea{width:100%;font:12px ui-monospace,Menlo,monospace;padding:10px;border-r
       if(!x || !isFinite(x.t) || (x.d !== 1 && x.d !== -1) || !ids[x.b]) return null;
       out.log.push({ t:+x.t, d:x.d, b:x.b });
     }
+    if(isFinite(o.value) && +o.value > 0 && +o.value < 1000) out.value = +o.value;
     return out;
   }
   $('openBk').onclick = function(){
@@ -541,6 +558,20 @@ textarea{width:100%;font:12px ui-monospace,Menlo,monospace;padding:10px;border-r
     toast('Dati importati');
   };
 
+  $('openVal').onclick = function(){
+    closeSheet();
+    $('valIn').value = val();
+    $('ov4').classList.add('on');
+  };
+  $('valCancel').onclick = function(){ $('ov4').classList.remove('on'); };
+  $('ov4').onclick = function(e){ if(e.target === this) $('ov4').classList.remove('on'); };
+  $('valSave').onclick = function(){
+    var v = parseFloat(String($('valIn').value).replace(',', '.'));
+    if(!isFinite(v) || v <= 0 || v >= 1000){ toast('Inserisci un importo valido'); return; }
+    state.value = Math.round(v * 100) / 100;
+    save(); render(); $('ov4').classList.remove('on'); toast('Valore salvato');
+  };
+
   var armed = false, rt;
   $('reset').onclick = function(){
     if(!armed){
@@ -549,7 +580,8 @@ textarea{width:100%;font:12px ui-monospace,Menlo,monospace;padding:10px;border-r
       return;
     }
     clearTimeout(rt); armed = false; this.textContent = 'Azzera tutto';
-    state = empty(); save(); render(); closeSheet(); toast('Tutto azzerato');
+    var keepV = state.value; state = empty(); if(keepV) state.value = keepV;
+    save(); render(); closeSheet(); toast('Tutto azzerato');
   };
 
   if('serviceWorker' in navigator){ navigator.serviceWorker.register('sw.js').catch(function(){}); }
