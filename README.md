@@ -8,7 +8,7 @@ Web app per tenere traccia dei buoni pasto: saldo, utilizzi con data e ora, bloc
 - **Saldo iniziale:** si imposta dalle Impostazioni, con quantità ed eventuale scadenza.
 - **Valore del buono:** configurabile (di default 8 €). Cambia gli importi mostrati in tutta l'app.
 - **Blocchi con scadenza:** ogni blocco di buoni può avere una data di scadenza. Il tasto − usa prima i buoni che scadono per primi. I buoni scaduti non contano nel saldo e vengono segnalati.
-- **Modifica:** si possono cambiare la scadenza di un blocco e la data e ora di ogni movimento (✎), o eliminare un movimento (✕).
+- **Modifica:** si possono cambiare la scadenza di un blocco e la data e ora di ogni movimento (✎), o eliminare un movimento (✕). Dalla stessa finestra di modifica si può eliminare un intero blocco, con tutti i suoi movimenti.
 - **Statistiche:** buoni usati e importo speso nel mese corrente.
 - **Copia di sicurezza:** esportazione e importazione dei dati come testo, per salvarli o spostarli su un altro dispositivo.
 - **Grafica adattabile:** telefoni piccoli, orizzontale, tablet e computer; tema chiaro e scuro automatico.

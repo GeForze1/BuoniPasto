@@ -168,6 +168,7 @@ textarea{width:100%;font:12px ui-monospace,Menlo,monospace;padding:10px;border-r
       <label for="edExpIn">Scadenza del blocco</label>
       <input id="edExpIn" type="date">
       <button class="clr" id="edClr">Nessuna scadenza</button>
+      <button class="danger" id="edDel">Elimina blocco</button>
     </div>
     <div id="edLog">
       <label for="edD">Data e ora</label>
@@ -459,7 +460,7 @@ textarea{width:100%;font:12px ui-monospace,Menlo,monospace;padding:10px;border-r
     return d.getFullYear() + '-' + pad(d.getMonth()+1) + '-' + pad(d.getDate()) + 'T' +
            pad(d.getHours()) + ':' + pad(d.getMinutes()) + ':' + pad(d.getSeconds());
   }
-  var editing = null;
+  var editing = null, delArmed = false, delT, delLabel = 'Elimina blocco';
   function openEdit(type, ref){
     editing = { type:type, ref:ref };
     if(type === 'blk'){
@@ -467,6 +468,10 @@ textarea{width:100%;font:12px ui-monospace,Menlo,monospace;padding:10px;border-r
       $('edTitle').textContent = 'Scadenza del blocco';
       $('edText').textContent = (b.kind === 'init' ? 'Saldo iniziale' : 'Blocco') + ' di ' + b.qty + (b.qty === 1 ? ' buono' : ' buoni') + '. Cambiando la data si aggiorna la scadenza di tutti i buoni di questo blocco.';
       $('edExpIn').value = b.expiry || '';
+      var nm = state.log.filter(function(x){ return x.b === b.id; }).length;
+      delLabel = 'Elimina blocco' + (nm ? ' e ' + nm + (nm === 1 ? ' movimento' : ' movimenti') : '');
+      clearTimeout(delT); delArmed = false;
+      $('edDel').textContent = delLabel;
       $('edBlk').style.display = ''; $('edLog').style.display = 'none';
     } else {
       var e = state.log[ref]; if(!e) return;
@@ -481,6 +486,19 @@ textarea{width:100%;font:12px ui-monospace,Menlo,monospace;padding:10px;border-r
   function closeEdit(){ $('ov2').classList.remove('on'); editing = null; }
   $('edCancel').onclick = closeEdit;
   $('ov2').onclick = function(e){ if(e.target === this) closeEdit(); };
+  $('edDel').onclick = function(){
+    if(!editing || editing.type !== 'blk') return;
+    if(!delArmed){
+      delArmed = true; this.textContent = 'Tocca ancora per confermare';
+      delT = setTimeout(function(){ delArmed = false; $('edDel').textContent = delLabel; }, 3000);
+      return;
+    }
+    clearTimeout(delT); delArmed = false;
+    var id = editing.ref;
+    state.blocks = state.blocks.filter(function(b){ return b.id !== id; });
+    state.log = state.log.filter(function(x){ return x.b !== id; });
+    save(); render(); closeEdit(); toast('Blocco eliminato');
+  };
   $('edClr').onclick = function(){ $('edExpIn').value = ''; };
   $('edSave').onclick = function(){
     if(!editing) return;

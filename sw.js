@@ -1,4 +1,4 @@
-const CACHE = 'buoni-pasto-v5';
+const CACHE = 'buoni-pasto-v6';
 const FILES = ['./', './index.html', './manifest.webmanifest', './icon-180.png', './icon-512.png'];
 
 self.addEventListener('install', (e) => {
