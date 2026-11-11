@@ -4,7 +4,7 @@ Web app per tenere traccia dei buoni pasto: saldo, utilizzi con data e ora, bloc
 
 ## Funzioni
 
-- **Tasti + e −:** aggiungono o usano un buono con un solo tocco, registrando data e ora (secondi compresi).
+- **Tasti + e −:** aggiungono o usano un buono con un solo tocco. I buoni usati nello stesso giorno compaiono raggruppati in una riga, con la sola data (senza ora).
 - **Saldo iniziale:** si imposta dalle Impostazioni, con quantità ed eventuale scadenza.
 - **Valore del buono:** configurabile (di default 8 €). Cambia gli importi mostrati in tutta l'app.
 - **Blocchi con scadenza:** ogni blocco di buoni può avere una data di scadenza. Il tasto − usa prima i buoni che scadono per primi. I buoni scaduti non contano nel saldo e vengono segnalati.

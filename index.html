@@ -393,7 +393,15 @@ textarea{width:100%;font:12px ui-monospace,Menlo,monospace;padding:10px;border-r
   function renderLog(){
     var ul = $('list'); ul.innerHTML = '';
     var items = [];
-    state.log.forEach(function(x,i){ items.push({ t:x.t, d:x.d, i:i, b:blockById(x.b) }); });
+    var groups = {};
+    state.log.forEach(function(x,i){
+      if(x.d < 0){
+        var k = toLocalInput(x.t).slice(0,10);
+        var g = groups[k] || (groups[k] = { key:k, t:0, n:0, bl:{} });
+        g.n++; g.t = Math.max(g.t, x.t); g.bl[x.b] = 1;
+      } else items.push({ t:x.t, d:x.d, i:i, b:blockById(x.b) });
+    });
+    Object.keys(groups).forEach(function(k){ items.push({ t:groups[k].t, grp:groups[k] }); });
     state.blocks.forEach(function(b){ if(b.kind !== 'auto') items.push({ t:b.t, blk:b }); });
     items.sort(function(a,b){ return b.t - a.t; });
     if(!items.length){
@@ -407,6 +415,11 @@ textarea{width:100%;font:12px ui-monospace,Menlo,monospace;padding:10px;border-r
         cls = 's'; sym = '•';
         title = (x.blk.kind === 'init' ? 'Saldo iniziale: ' : 'Nuovo blocco: ') + x.blk.qty + (x.blk.qty === 1 ? ' buono' : ' buoni');
         sub = dFmt.format(d) + ' · ' + tFmt.format(d) + blockTag(x.blk);
+      } else if(x.grp){
+        cls = 'm'; sym = '−';
+        title = x.grp.n === 1 ? 'Usato 1 buono' : 'Usati ' + x.grp.n + ' buoni';
+        var bk = Object.keys(x.grp.bl);
+        sub = dFmt.format(parseDay(x.grp.key)) + (bk.length === 1 ? blockTag(blockById(bk[0])) : '');
       } else {
         cls = x.d > 0 ? 'p' : 'm'; sym = x.d > 0 ? '+' : '−';
         title = x.d > 0 ? 'Aggiunto 1 buono' : 'Usato 1 buono';
@@ -415,12 +428,13 @@ textarea{width:100%;font:12px ui-monospace,Menlo,monospace;padding:10px;border-r
       li.innerHTML = '<div class="dot ' + cls + '">' + sym + '</div>' +
         '<div class="t"><b>' + title + '</b><span>' + sub + '</span></div>';
       li.appendChild(editBtn(function(){
-        if(x.blk) openEdit('blk', x.blk.id); else openEdit('log', x.i);
+        if(x.blk) openEdit('blk', x.blk.id); else if(x.grp) openEdit('day', x.grp.key); else openEdit('log', x.i);
       }, x.blk ? 'Modifica scadenza' : 'Modifica data e ora'));
       if(!x.blk){
         var del = document.createElement('button');
         del.className = 'del'; del.textContent = '✕'; del.setAttribute('aria-label','Elimina movimento');
         del.onclick = function(){
+          if(x.grp){ removeOneFromDay(x.grp.key); return; }
           if(x.d > 0 && x.b && remaining(x.b) - 1 < 0){ toast('Già usato: elimina prima i prelievi'); return; }
           state.log.splice(x.i,1); save(); render(); toast('Movimento eliminato');
         };
@@ -428,6 +442,15 @@ textarea{width:100%;font:12px ui-monospace,Menlo,monospace;padding:10px;border-r
       }
       ul.appendChild(li);
     });
+  }
+
+  function removeOneFromDay(key){
+    var best = -1;
+    state.log.forEach(function(x,i){
+      if(x.d < 0 && toLocalInput(x.t).slice(0,10) === key && (best < 0 || x.t > state.log[best].t)) best = i;
+    });
+    if(best < 0) return;
+    state.log.splice(best,1); save(); render(); toast('Tolto 1 buono usato');
   }
 
   /* ---- azioni ---- */
@@ -463,6 +486,7 @@ textarea{width:100%;font:12px ui-monospace,Menlo,monospace;padding:10px;border-r
   var editing = null, delArmed = false, delT, delLabel = 'Elimina blocco';
   function openEdit(type, ref){
     editing = { type:type, ref:ref };
+    $('edT').style.display = ''; document.querySelector('#edLog .two').style.gridTemplateColumns = '';
     if(type === 'blk'){
       var b = blockById(ref); if(!b) return;
       $('edTitle').textContent = 'Scadenza del blocco';
@@ -473,6 +497,13 @@ textarea{width:100%;font:12px ui-monospace,Menlo,monospace;padding:10px;border-r
       clearTimeout(delT); delArmed = false;
       $('edDel').textContent = delLabel;
       $('edBlk').style.display = ''; $('edLog').style.display = 'none';
+    } else if(type === 'day'){
+      var n = state.log.filter(function(x){ return x.d < 0 && toLocalInput(x.t).slice(0,10) === ref; }).length;
+      $('edTitle').textContent = 'Data di utilizzo';
+      $('edText').textContent = n === 1 ? 'Sposta il buono usato in un altro giorno.' : 'Sposta tutti i ' + n + ' buoni usati di questo giorno in un altro giorno.';
+      $('edD').value = ref;
+      $('edT').style.display = 'none'; document.querySelector('#edLog .two').style.gridTemplateColumns = '1fr';
+      $('edBlk').style.display = 'none'; $('edLog').style.display = '';
     } else {
       var e = state.log[ref]; if(!e) return;
       $('edTitle').textContent = e.d > 0 ? 'Data di aggiunta' : 'Data di utilizzo';
@@ -505,6 +536,11 @@ textarea{width:100%;font:12px ui-monospace,Menlo,monospace;padding:10px;border-r
     if(editing.type === 'blk'){
       var b = blockById(editing.ref); if(!b) return closeEdit();
       b.expiry = $('edExpIn').value || null;
+    } else if(editing.type === 'day'){
+      var dv = $('edD').value, ms2 = new Date(dv + 'T12:00:00').getTime();
+      if(!dv || isNaN(ms2)){ toast('Inserisci una data valida'); return; }
+      var oldKey = editing.ref;
+      state.log.forEach(function(x){ if(x.d < 0 && toLocalInput(x.t).slice(0,10) === oldKey) x.t = ms2; });
     } else {
       var tv = $('edT').value;
       var ms = new Date($('edD').value + 'T' + (tv.length === 5 ? tv + ':00' : tv)).getTime();
